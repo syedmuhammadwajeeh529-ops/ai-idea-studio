@@ -1,0 +1,376 @@
+const state = {
+  projects: [],
+  selectedProjectId: null,
+  providerStatus: null
+};
+
+const els = {
+  projectCount: document.getElementById("projectCount"),
+  completedCount: document.getElementById("completedCount"),
+  recentProjects: document.getElementById("recentProjects"),
+  providerStatus: document.getElementById("providerStatus"),
+  projectList: document.getElementById("projectList"),
+  projectSearch: document.getElementById("projectSearch"),
+  editorTitle: document.getElementById("editorTitle"),
+  projectTitleInput: document.getElementById("projectTitleInput"),
+  projectDescriptionInput: document.getElementById("projectDescriptionInput"),
+  projectIdeaInput: document.getElementById("projectIdeaInput"),
+  genreInput: document.getElementById("genreInput"),
+  audienceInput: document.getElementById("audienceInput"),
+  styleInput: document.getElementById("styleInput"),
+  languageInput: document.getElementById("languageInput"),
+  aspectRatioInput: document.getElementById("aspectRatioInput"),
+  durationInput: document.getElementById("durationInput"),
+  sceneList: document.getElementById("sceneList"),
+  versionList: document.getElementById("versionList"),
+  toast: document.getElementById("toast")
+};
+
+const showToast = (message) => {
+  els.toast.textContent = message;
+  els.toast.classList.remove("hidden");
+  clearTimeout(showToast.timeout);
+  showToast.timeout = setTimeout(() => els.toast.classList.add("hidden"), 2400);
+};
+
+const formatDate = (iso) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+
+const setProviderStatus = (status) => {
+  state.providerStatus = status;
+  const ready = Boolean(status?.ready);
+  els.providerStatus.textContent = status?.message || "Unknown provider state";
+  els.providerStatus.className = `status-pill ${ready ? "success" : "warning"}`;
+};
+
+const renderProjectCards = () => {
+  const term = els.projectSearch.value.trim().toLowerCase();
+  const visibleProjects = (state.projects || []).filter((project) => {
+    if (!term) return true;
+    const haystack = `${project.title} ${project.description} ${project.idea}`.toLowerCase();
+    return haystack.includes(term);
+  });
+
+  els.projectCount.textContent = String(state.projects.length);
+  els.completedCount.textContent = String(state.projects.filter((p) => p.status === "Completed").length);
+
+  if (!visibleProjects.length) {
+    els.projectList.innerHTML = '<div class="project-card"><div class="body"><h3>No projects yet</h3><p>Start a new idea and save it to your creative library.</p></div></div>';
+    return;
+  }
+
+  els.projectList.innerHTML = visibleProjects
+    .map((project) => {
+      const completion = project.status === "Completed" ? 100 : project.status === "Draft" ? 20 : project.status === "Planning" ? 45 : project.status === "Generating Images" ? 65 : project.status === "Generating Video" ? 80 : 55;
+      return `
+        <article class="project-card" data-project-id="${project.id}" tabindex="0">
+          <div class="thumb">${(project.title || "Idea").slice(0, 2).toUpperCase()}</div>
+          <div class="body">
+            <div class="meta-row">
+              <strong>${project.title || "Untitled Project"}</strong>
+              <span class="status-tag">${project.status || "Draft"}</span>
+            </div>
+            <p>${(project.description || project.idea || "A saved creative concept.").slice(0, 90)}</p>
+            <div class="meta-row">
+              <span>Updated</span>
+              <span>${formatDate(project.updated_at || project.created_at)}</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:${completion}%"></div></div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  els.projectList.querySelectorAll(".project-card").forEach((card) => {
+    card.addEventListener("click", () => selectProject(card.dataset.projectId));
+  });
+};
+
+const renderRecentProjects = () => {
+  const recent = [...state.projects].slice(0, 5);
+  els.recentProjects.innerHTML = recent.map((project) => `
+    <div class="project-ribbon-item" data-project-id="${project.id}">
+      <strong>${project.title || "Untitled"}</strong>
+      <small>${project.status || "Draft"}</small>
+    </div>
+  `).join("");
+
+  els.recentProjects.querySelectorAll(".project-ribbon-item").forEach((item) => {
+    item.addEventListener("click", () => selectProject(item.dataset.projectId));
+  });
+};
+
+const renderProjectDetails = (project) => {
+  if (!project) return;
+
+  state.selectedProjectId = project.id;
+  els.editorTitle.textContent = project.title || "Untitled Project";
+  els.projectTitleInput.value = project.title || "";
+  els.projectDescriptionInput.value = project.description || "";
+  els.projectIdeaInput.value = project.idea || "";
+  els.genreInput.value = project.genre || "";
+  els.audienceInput.value = project.audience || "";
+  els.styleInput.value = project.style || "";
+  els.languageInput.value = project.language || "English";
+  els.aspectRatioInput.value = project.aspect_ratio || "16:9";
+  els.durationInput.value = project.target_duration || 90;
+
+  const sceneList = project.scenes || [];
+  els.sceneList.innerHTML = sceneList.length
+    ? sceneList.map((scene, index) => `
+        <div class="scene-item">
+          <h4>Scene ${index + 1}: ${scene.title || "Untitled scene"}</h4>
+          <p>${scene.summary || scene.narration || "No summary yet."}</p>
+          <div class="detail-actions">
+            <button class="ghost-button" data-scene-id="${scene.id}" data-action="image">Image</button>
+            <button class="ghost-button" data-scene-id="${scene.id}" data-action="video">Video</button>
+          </div>
+        </div>
+      `).join("")
+    : '<div class="scene-item"><p>No scenes generated yet. Create a plan to begin.</p></div>';
+
+  els.sceneList.querySelectorAll("[data-action]").forEach((button) => {
+    button.addEventListener("click", () => handleSceneAction(button.dataset.action, button.dataset.sceneId));
+  });
+
+  els.versionList.innerHTML = (project.versions || []).slice(0, 6).map((version) => `
+    <li class="version-item">${version.label} · ${formatDate(version.created_at)}</li>
+  `).join("") || '<li class="version-item">No saved versions yet.</li>';
+};
+
+const loadProjects = async () => {
+  const res = await fetch('/api/projects');
+  const data = await res.json();
+  state.projects = data.projects || [];
+  renderProjectCards();
+  renderRecentProjects();
+
+  if (!state.selectedProjectId && state.projects.length) {
+    selectProject(state.projects[0].id);
+  }
+};
+
+const loadProviderStatus = async () => {
+  const res = await fetch('/api/provider-status');
+  const status = await res.json();
+  setProviderStatus(status);
+};
+
+const selectProject = async (projectId) => {
+  const res = await fetch(`/api/projects/${projectId}`);
+  const data = await res.json();
+  if (!data.project) return;
+  renderProjectDetails(data.project);
+};
+
+const saveCurrentProject = async (options = {}) => {
+  const projectId = state.selectedProjectId || null;
+  if (!projectId) {
+    showToast("Create or select a project before saving.");
+    return;
+  }
+
+  const payload = {
+    title: els.projectTitleInput.value,
+    description: els.projectDescriptionInput.value,
+    idea: els.projectIdeaInput.value,
+    genre: els.genreInput.value,
+    audience: els.audienceInput.value,
+    style: els.styleInput.value,
+    language: els.languageInput.value,
+    aspect_ratio: els.aspectRatioInput.value,
+    target_duration: Number(els.durationInput.value || 60),
+    status: options.status || "Draft"
+  };
+
+  const res = await fetch(`/api/projects/${projectId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+  if (!data.project) {
+    showToast("Unable to save project.");
+    return;
+  }
+
+  showToast("Idea saved.");
+  await loadProjects();
+  renderProjectDetails(data.project);
+};
+
+const createProject = async () => {
+  const title = `Project ${state.projects.length + 1}`;
+  const res = await fetch('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description: 'New creative concept', idea: 'The user enters a new idea here...', status: 'Draft' })
+  });
+  const data = await res.json();
+  const project = data.project;
+  await loadProjects();
+  if (project) {
+    selectProject(project.id);
+  }
+  showToast("New project created.");
+};
+
+const generatePlan = async () => {
+  if (!state.selectedProjectId) {
+    showToast("Pick a project first.");
+    return;
+  }
+
+  await saveCurrentProject({ status: "Planning" });
+  const res = await fetch(`/api/projects/${state.selectedProjectId}/generate-plan`, { method: "POST" });
+  const data = await res.json();
+  if (!data.ok) {
+    showToast("Plan generation failed.");
+    return;
+  }
+  await loadProjects();
+  renderProjectDetails(data.project);
+  showToast("Story plan generated.");
+};
+
+const handleSceneAction = async (action, sceneId) => {
+  if (!state.selectedProjectId) return;
+  const project = state.projects.find((entry) => entry.id === state.selectedProjectId);
+  const scene = (project?.scenes || []).find((entry) => entry.id === sceneId);
+
+  if (!scene) return;
+
+  if (action === "image") {
+    const res = await fetch(`/api/projects/${state.selectedProjectId}/generate-images`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sceneId, type: "scene", prompt: scene.visual_prompt || scene.summary })
+    });
+    const data = await res.json();
+    if (data.providerRequired) {
+      showToast(data.message || "Image generation needs provider configuration.");
+      return;
+    }
+    showToast("Scene image request accepted.");
+  }
+
+  if (action === "video") {
+    const res = await fetch(`/api/projects/${state.selectedProjectId}/generate-video`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sceneId, prompt: scene.visual_prompt || scene.summary })
+    });
+    const data = await res.json();
+    if (data.providerRequired) {
+      showToast(data.message || "Video generation needs provider configuration.");
+      return;
+    }
+    showToast("Video clip request accepted.");
+  }
+
+  await loadProjects();
+};
+
+const generateImages = async () => {
+  if (!state.selectedProjectId) {
+    showToast("Pick a project first.");
+    return;
+  }
+
+  const project = state.projects.find((entry) => entry.id === state.selectedProjectId);
+  const scene = (project?.scenes || [])[0];
+  if (!scene) {
+    showToast("Generate a plan first to create scene images.");
+    return;
+  }
+
+  const res = await fetch(`/api/projects/${state.selectedProjectId}/generate-images`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sceneId: scene.id, type: "scene", prompt: scene.visual_prompt })
+  });
+  const data = await res.json();
+  if (data.providerRequired) {
+    showToast(data.message || "Image generation requires provider config.");
+    return;
+  }
+  showToast("Image generation request sent.");
+  await loadProjects();
+};
+
+const generateVideo = async () => {
+  if (!state.selectedProjectId) {
+    showToast("Pick a project first.");
+    return;
+  }
+
+  const project = state.projects.find((entry) => entry.id === state.selectedProjectId);
+  const scene = (project?.scenes || [])[0];
+  if (!scene) {
+    showToast("Generate a plan first to create video clips.");
+    return;
+  }
+
+  const res = await fetch(`/api/projects/${state.selectedProjectId}/generate-video`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sceneId: scene.id, prompt: scene.visual_prompt })
+  });
+  const data = await res.json();
+  if (data.providerRequired) {
+    showToast(data.message || "Video generation requires provider config.");
+    return;
+  }
+  showToast("Video generation request sent.");
+  await loadProjects();
+};
+
+const assembleVideo = async () => {
+  if (!state.selectedProjectId) {
+    showToast("Select a project first.");
+    return;
+  }
+
+  const res = await fetch(`/api/projects/${state.selectedProjectId}/assemble-video`, { method: "POST" });
+  const data = await res.json();
+  if (!data.ok) {
+    showToast(data.message || "Assembly needs provider configuration.");
+    return;
+  }
+  await loadProjects();
+  showToast("Final assembly workflow started.");
+};
+
+const saveVersion = async () => {
+  if (!state.selectedProjectId) {
+    showToast("Select a project first.");
+    return;
+  }
+  const res = await fetch(`/api/projects/${state.selectedProjectId}/version`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ label: `Snapshot ${new Date().toLocaleTimeString()}` })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    await loadProjects();
+    showToast(`Version saved: ${data.label}`);
+  }
+};
+
+els.projectSearch.addEventListener("input", renderProjectCards);
+document.getElementById("newProjectBtn").addEventListener("click", createProject);
+document.getElementById("refreshBtn").addEventListener("click", () => { loadProjects(); loadProviderStatus(); });
+document.getElementById("saveProjectBtn").addEventListener("click", () => saveCurrentProject({ status: "Draft" }));
+document.getElementById("saveIdeaOnlyBtn").addEventListener("click", () => saveCurrentProject({ status: "Draft" }));
+document.getElementById("saveVersionBtn").addEventListener("click", saveVersion);
+document.getElementById("generatePlanBtn").addEventListener("click", generatePlan);
+document.getElementById("generateImagesBtn").addEventListener("click", generateImages);
+document.getElementById("generateVideoBtn").addEventListener("click", generateVideo);
+document.getElementById("assembleVideoBtn").addEventListener("click", assembleVideo);
+
+(async function init() {
+  await loadProviderStatus();
+  await loadProjects();
+})();

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Idea Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark">AI</div>
+          <div>
+            <div class="brand-title">AI Idea Studio</div>
+            <div class="brand-subtitle">Wajeeh Codes</div>
+          </div>
+        </div>
+
+        <button id="newProjectBtn" class="primary-button">+ Create New Project</button>
+
+        <div class="sidebar-section">
+          <div class="section-label">Overview</div>
+          <div class="mini-stat-grid">
+            <div class="mini-stat">
+              <span class="mini-value" id="projectCount">0</span>
+              <small>Projects</small>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-value" id="completedCount">0</span>
+              <small>Completed</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-label">Status</div>
+          <div id="providerStatus" class="status-pill neutral">Checking providers…</div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-label">Recent Projects</div>
+          <div id="recentProjects" class="project-ribbon"></div>
+        </div>
+      </aside>
+
+      <main class="main-panel">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">Creative workspace</div>
+            <h1>Project Dashboard</h1>
+          </div>
+          <div class="toolbar-actions">
+            <input id="projectSearch" type="search" placeholder="Search projects or ideas" />
+            <button id="refreshBtn" class="ghost-button">Refresh</button>
+          </div>
+        </header>
+
+        <section class="dashboard-grid" id="projectList"></section>
+
+        <section class="editor-layout">
+          <div class="editor-panel">
+            <div class="panel-header">
+              <div>
+                <div class="section-label">Idea editor</div>
+                <h2 id="editorTitle">Untitled Project</h2>
+              </div>
+              <div class="inline-actions">
+                <button class="ghost-button" id="saveProjectBtn">Save Idea</button>
+                <button class="primary-button" id="generatePlanBtn">Generate Plan</button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label>Project title</label>
+              <input id="projectTitleInput" type="text" placeholder="Project title" />
+            </div>
+
+            <div class="field-group">
+              <label>Project description</label>
+              <textarea id="projectDescriptionInput" rows="3" placeholder="Short project description"></textarea>
+            </div>
+
+            <div class="field-group">
+              <label>Original idea</label>
+              <textarea id="projectIdeaInput" rows="12" placeholder="Write the core concept..."></textarea>
+            </div>
+
+            <div class="meta-grid">
+              <div class="field-group">
+                <label>Genre</label>
+                <input id="genreInput" type="text" placeholder="Sci-Fi" />
+              </div>
+              <div class="field-group">
+                <label>Target audience</label>
+                <input id="audienceInput" type="text" placeholder="Teens, adults, creators" />
+              </div>
+              <div class="field-group">
+                <label>Visual style</label>
+                <input id="styleInput" type="text" placeholder="Cinematic" />
+              </div>
+              <div class="field-group">
+                <label>Language</label>
+                <input id="languageInput" type="text" placeholder="English" />
+              </div>
+              <div class="field-group">
+                <label>Aspect ratio</label>
+                <select id="aspectRatioInput">
+                  <option value="16:9">16:9</option>
+                  <option value="9:16">9:16</option>
+                  <option value="1:1">1:1</option>
+                  <option value="21:9">21:9</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label>Target duration (sec)</label>
+                <input id="durationInput" type="number" min="10" max="600" value="90" />
+              </div>
+            </div>
+
+            <div class="panel-footer-actions">
+              <button id="saveIdeaOnlyBtn" class="ghost-button">Save Draft</button>
+              <button id="saveVersionBtn" class="ghost-button">Version Snapshot</button>
+            </div>
+          </div>
+
+          <aside class="details-panel">
+            <div class="panel-header compact">
+              <div>
+                <div class="section-label">Plan & outputs</div>
+                <h3>Scene plan</h3>
+              </div>
+            </div>
+
+            <div id="sceneList" class="scene-list"></div>
+
+            <div class="panel-section">
+              <h4>Generation controls</h4>
+              <div class="stacked-buttons">
+                <button class="secondary-button" id="generateImagesBtn">Generate Scene Images</button>
+                <button class="secondary-button" id="generateVideoBtn">Generate Video Clips</button>
+                <button class="primary-button" id="assembleVideoBtn">Assemble Final Video</button>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <h4>Project versions</h4>
+              <ul id="versionList" class="version-list"></ul>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
