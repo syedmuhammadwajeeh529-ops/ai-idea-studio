@@ -38,18 +38,9 @@ const extractKeywords = (idea) => {
   return unique.slice(0, 8);
 };
 
-const normalizeProjectTitle = (rawTitle) => {
-  const title = String(rawTitle ?? "").trim();
-
-  if (!title) return "Untitled Project";
-  if (/^other project(?:\s+\d+)*$/i.test(title)) return "Untitled Project";
-
-  return title.replace(/\s+/g, " ");
-};
-
 const buildPlan = (project) => {
   const keywordList = extractKeywords(project.idea || project.title || "creative concept");
-  const title = normalizeProjectTitle(project.title || project.idea || "Untitled Project");
+  const title = project.title || "Untitled Creative Project";
   const genre = project.genre || "Adventure";
 
   const scenes = [
@@ -126,7 +117,7 @@ export const aiProvider = {
       type,
       prompt,
       sceneTitle: scene?.title || "Scene",
-      message: `Image generation request accepted for ${normalizeProjectTitle(project.title)}. Connect your provider to complete the actual render.`
+      message: `Image generation request accepted for ${project.title}. Connect your provider to complete the actual render.`
     };
   },
   generateVideoClip: async ({ project, scene, prompt }) => {
@@ -141,7 +132,7 @@ export const aiProvider = {
       provider: process.env.RUNWAY_API_KEY ? "Runway" : "Luma",
       sceneTitle: scene?.title || "Scene",
       prompt,
-      message: `Video generation request accepted for ${normalizeProjectTitle(project.title)}. Connect your provider to complete the render.`
+      message: `Video generation request accepted for ${project.title}. Connect your provider to complete the actual render.`
     };
   },
   assembleFinalVideo: async ({ project, scenes }) => {
@@ -156,7 +147,7 @@ export const aiProvider = {
       ok: true,
       provider: "Configured provider",
       scenes: scenes.length,
-      message: `Assembly workflow initialized for ${normalizeProjectTitle(project.title)}. Final export will be prepared once a rendering provider is configured.`
+      message: `Assembly workflow initialized for ${project.title}. Final export will be prepared once a rendering provider is configured.`
     };
   }
 };
